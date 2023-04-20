@@ -16,15 +16,13 @@ class GcdOutputBundle(val w: Int) extends Bundle {
   val gcd    = UInt(w.W)
 }
 
-/**
-  * Compute Gcd using subtraction method.
-  * Subtracts the smaller from the larger until register y is zero.
-  * value input register x is then the Gcd.
-  * Unless first input is zero then the Gcd is y.
-  * Can handle stalls on the producer or consumer side
+/** Compute Gcd using subtraction method. Subtracts the smaller from the larger
+  * until register y is zero. value input register x is then the Gcd. Unless
+  * first input is zero then the Gcd is y. Can handle stalls on the producer or
+  * consumer side
   */
 class DecoupledGcd(width: Int) extends Module {
-  val input = IO(Flipped(Decoupled(new GcdInputBundle(width))))
+  val input  = IO(Flipped(Decoupled(new GcdInputBundle(width))))
   val output = IO(Decoupled(new GcdOutputBundle(width)))
 
   val xInitial    = Reg(UInt())
@@ -34,11 +32,11 @@ class DecoupledGcd(width: Int) extends Module {
   val busy        = RegInit(false.B)
   val resultValid = RegInit(false.B)
 
-  input.ready := ! busy
+  input.ready  := !busy
   output.valid := resultValid
-  output.bits := DontCare
+  output.bits  := DontCare
 
-  when(busy)  {
+  when(busy) {
     when(x > y) {
       x := x - y
     }.otherwise {
@@ -53,21 +51,41 @@ class DecoupledGcd(width: Int) extends Module {
 
       output.bits.value1 := xInitial
       output.bits.value2 := yInitial
-      resultValid := true.B
+      resultValid        := true.B
 
       when(output.ready && resultValid) {
-        busy := false.B
+        busy        := false.B
         resultValid := false.B
       }
     }
   }.otherwise {
     when(input.valid) {
       val bundle = input.deq()
-      x := bundle.value1
-      y := bundle.value2
+      x        := bundle.value1
+      y        := bundle.value2
       xInitial := bundle.value1
       yInitial := bundle.value2
-      busy := true.B
+      busy     := true.B
     }
   }
+}
+
+import chisel3.stage.ChiselStage
+object DecoupledGcdApp extends App {
+  (new ChiselStage).emitVerilog(
+    new DecoupledGcd(8),
+    Array(
+      "-td",
+      "build",    // Work directory (default: '.')
+      "-X",
+      "verilog",  // The FIRRTL compiler to use (default: verilog)
+      "--no-dce", // Disable dead code elimination
+      "--emit-modules",
+      "verilog",  // Run the specified module emitter (one file per module)
+      "--emission-options",
+      "disableMemRandomization", // Options to disable random initialization for memory and registers
+      "--emission-options",
+      "disableRegisterRandomization" // Options to disable random initialization for memory and registers
+    )
+  )
 }
