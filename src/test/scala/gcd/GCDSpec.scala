@@ -6,6 +6,7 @@ import chisel3._
 import chiseltest._
 import org.scalatest.freespec.AnyFreeSpec
 import chisel3.experimental.BundleLiterals._
+import chiseltest.{WriteVcdAnnotation, VerilatorBackendAnnotation}
 
 /** This is a trivial example of how to run this Specification From within sbt
   * use:
@@ -20,7 +21,10 @@ import chisel3.experimental.BundleLiterals._
 class GCDSpec extends AnyFreeSpec with ChiselScalatestTester {
 
   "Gcd should calculate proper greatest common denominator" in {
-    test(new DecoupledGcd(16)) { dut =>
+    test(new DecoupledGcd(16)).withAnnotations(Seq(
+      WriteVcdAnnotation,
+      VerilatorBackendAnnotation
+    )) { dut =>
       dut.input.initSource()
       dut.input.setSourceClock(dut.clock)
       dut.output.initSink()
